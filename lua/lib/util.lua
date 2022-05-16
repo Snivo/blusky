@@ -19,3 +19,70 @@ function blusky.util.getBits(num)
 
     return bits
 end
+
+function blusky.util.parseCommand(str)
+    local args = {}
+    local tokens = {}
+    local openQuote = nil
+
+    local space, quote = string.byte(' "', 1, 2)
+
+    for i = 1, #str do 
+        local c = string.byte(str, i)
+
+        if c == space then
+            tokens[#tokens + 1] = {"space", i}
+        elseif c == quote then
+            if openQuote then
+                openQuote[3] = i
+                openQuote = nil
+            else
+                tokens[#tokens + 1] = {"quote", i}
+                openQuote = tokens[#tokens]
+            end
+        end
+    end
+
+    tokens[#tokens + 1] = {"eol"}
+    
+    local charIdx = 1
+    local tokenIdx = 1
+
+    while tokenIdx <= #tokens do
+        local token = tokens[tokenIdx]
+        local arg = ""
+
+        if token[1] == "quote" then
+            if token[3] then
+                local prestr = str:sub(charIdx, token[2] - 1)
+
+                if prestr ~= "" and prestr ~= " " then
+                    args[#args + 1] = prestr
+                end
+
+                arg = str:sub(token[2] + 1, token[3] - 1)
+                charIdx = token[3] + 1
+            end
+        elseif token[1] == "space" then
+            arg = str:sub(charIdx, token[2] - 1)
+            charIdx = math.max(token[2] + 1, charIdx)
+        elseif token[1] == "eol" then
+            arg = str:sub(charIdx)
+
+            if arg ~= "" and arg ~= " " then
+                args[#args + 1] = arg
+            end
+            break
+        end
+
+        if arg ~= "" and arg ~= " " then
+            args[#args + 1] = arg
+        end
+
+        tokenIdx = tokenIdx + 1
+    end
+
+    print(str)
+
+    return args
+end
