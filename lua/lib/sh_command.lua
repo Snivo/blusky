@@ -12,7 +12,7 @@ local command = {
 
 command.net = {
     netidBits = 1,
-    cmdCodeBits = (function() return blusky.util.getBits(table.Count(command.commandCode)) end)(),
+    cmdCodeBits = blusky.util.getBits(table.Count(command.commandCode)),
 }
 
 function command.register(data)
