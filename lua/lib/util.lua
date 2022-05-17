@@ -81,8 +81,6 @@ function blusky.util.parseCommand(str)
 
         tokenIdx = tokenIdx + 1
     end
-
-    print(str)
-
+    
     return args
 end
