@@ -1,19 +1,47 @@
 local command = blusky.command
 
-function command.call(name, caller, ...)
+-- Table of arguments to be provided to chat.AddText on error --
+local errorChatMsg = {
+    -- unknownError --
+    {
+        blusky.util.color.chatError,
+        "An unknown error has occured!"
+    },
+    -- badArguments --
+    {
+        blusky.util.color.chatError,
+        "Incorrect arguments provided!"
+    },
+    -- notCommand --
+    {
+        blusky.util.color.notCommand,
+        "Invalid command!"
+    }
+}
+
+local function printError(error)
+    MsgC(unpack(errorChatMsg[error]))
+    MsgN()
+end
+
+function command.call(name, caller, args)
     local cmd = command.commandData[name]
 
     if (not cmd) then
         return command.commandCode.notCommand
     end
 
-    local code = cmd.validate() 
+    local code = cmd.validate(args) 
     
     if (code ~= command.commandCode.ok) then
         return code
     end
 
-    return cmd.call(caller, ...)
+    return cmd.call(caller, args)
+end
+
+function command.callParsed(name, caller, args)
+
 end
 
 -- Netcode Setup --
@@ -29,8 +57,6 @@ local function r_ExecFromClient(len, ply)
         return
     end
 
-    blusky.debug.print(ply)
-
     command.call(cmd.name, ply, cmd.unpack())
 end
 
@@ -41,3 +67,22 @@ local function s_CommandError(ply, error)
 end
 
 net.Receive("blusky.net.execfromclient", r_ExecFromClient)
+
+-- Command Setup --
+local function ExecuteCommand(ply, cmd, args, strargs)
+    if ply:IsValid() then 
+        return 
+    end
+
+    args = blusky.util.parseCommand(strargs)
+    local cmd = args[1]
+    table.remove(args, 1)
+
+    local error = command.call(cmd, NULL, args)
+
+    if error ~= command.commandCode.ok then
+        printError(error)
+    end
+end
+
+concommand.Add("blusky", ExecuteCommand)
