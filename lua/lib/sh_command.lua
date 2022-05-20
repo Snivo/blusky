@@ -8,15 +8,16 @@ local command = {
         CODE_BAD_COMMAND = 2
     },
     net = {
-        commandbits = 1,
+        commandBits = 1,
         enumBits = 0
-    }
+    },
+    con = {}
 }
 
 command.net.enumBits = blusky.util.getBits(table.Count(command.enum))
 
-local function argcheck(var, name, type)
-    assert(type(var) == type, Format("%s required for %s property", type, name))
+local function argcheck(var, name, _type)
+    assert(type(var) == _type, Format("%s required for %s property", _type, name))
 end
 
 function command.register( data )
@@ -51,8 +52,8 @@ function command.register( data )
 
     command.data[cmd.name] = cmd
     command.netid[netid] = cmd
-
-    command.net.commandbits = blusky.util.getBits(netid)
+    
+    command.net.commandBits = blusky.util.getBits(netid)
 end
 
 function command.getByName(name)
@@ -61,6 +62,12 @@ end
 
 function command.getByNetid(id)
     return command.netid[id]
+end
+
+for k, v in ipairs(file.Find("command/*.lua", "LUA")) do
+    local file = Format("command/%s", v)
+    AddCSLuaFile(file)
+    command.register(include(file))
 end
 
 blusky.command = command

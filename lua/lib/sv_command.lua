@@ -7,12 +7,17 @@ function command.call(name, caller, args)
         return command.enum.CODE_BAD_COMMAND
     end
 
-    local code = cmd.Validate(args)
+    local code = cmd.validate(args)
     if code != command.enum.CODE_OK then
         return code
     end
 
+    if hook.Run("blusky.command.suppress", name, caller, args) then
+        return
+    end
+
     cmd.execute(caller, args)
+    return command.enum.CODE_OK
 end
 
 -- Net receiver for when player calls a command --
@@ -45,7 +50,28 @@ function command.net.relayError(error, client, message)
     net.Send(client)
 end
 
+function command.con.execute(ply, _, _, strargs)
+    if IsValid(ply) then 
+        return 
+    end
+
+    local args = blusky.util.parseCommand(strargs)
+    local cmdName = table.remove(args, 1)
+    local cmd = command.getByName(cmdName)
+
+    if !cmd then
+        MsgC(blusky.theme.errorColor, Format("Invalid command: %s\n", cmdName))
+        return
+    end
+
+    cmd.parse(args)
+
+    command.call(cmd.name, ply, args)
+end
+
 util.AddNetworkString("blusky.command.error")
 util.AddNetworkString("blusky.command.execute")
 
 net.Receive("blusky.command.execute", command.net.callRequest)
+
+concommand.Add("blusky", command.con.execute)
