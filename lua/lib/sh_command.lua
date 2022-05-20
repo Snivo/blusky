@@ -1,49 +1,66 @@
-local command = { 
-    commandData = {}, -- Key/Value table of commands and data (sv only)
-    netid = {}, -- Numerically indexed table of network ids (sv/client shared)
+local command = {
 
-    commandCode = {
-        ok = 0,
-        unknownError = 1,
-        badArguments = 2,
-        notCommand = 3
+    data = {},
+    netid = {}, 
+    enum = {
+        CODE_OK = 0,
+        CODE_BAD_ARGUMENT = 1,
+        CODE_BAD_COMMAND = 2
     },
+    net = {
+        commandbits = 1,
+        enumBits = 0
+    }
 }
 
-command.net = {
-    netidBits = 1,
-    cmdCodeBits = blusky.util.getBits(table.Count(command.commandCode)),
-}
+command.net.enumBits = blusky.util.getBits(table.Count(command.enum))
 
-function command.register(data)
-    assert(isfunction(data.validate), "validate property must be function")
-    assert(isfunction(data.pack), "pack property must be a function")
-    
-    if SERVER then
-        assert(isfunction(data.call), "call property must be function")
-        assert(isfunction(data.unpack), "unpack property must be function")
-    
-        data.pack = nil
-    else
-        data.call = nil
-        data.unpack = nil
-    end
-    
-    assert(isstring(data.name), "name property must be string")
-
-    local name = data.name
-    local id = #command.netid
-
-    data.netid = id
-
-    command.commandData[name] = data
-    command.netid[id] = name
-    command.net.netidBits = blusky.util.getBits(#command.netid)
+local function argcheck(var, name, type)
+    assert(type(var) == type, Format("%s required for %s property", type, name))
 end
 
-for k, v in ipairs(file.Find("command/*.lua", "LUA")) do
-    AddCSLuaFile("command/"..v)
-    command.register(include("command/"..v))
+function command.register( data )
+    argcheck(data.name, "name", "string")
+    argcheck(data.send, "send", "function")
+    argcheck(data.send, "read", "function")
+    argcheck(data.send, "parse", "function")
+    argcheck(data.send, "validate", "function")
+    argcheck(data.send, "execute", "function")
+    
+    local netid = #command.netid + 1
+
+    local cmd = {
+        -- Name of the command --
+        name = data.name,
+        -- Function for sending exec data over network --
+        send = data.send,
+        -- Function for reading exec data over network --
+        read = data.read,
+        -- Function for validating and parsing the initial string arguments --
+        parse = data.parse,
+        -- Function for validating data sent over network -- 
+        validate = data.validate,
+
+        netid = netid
+    }
+
+    if SERVER then
+        -- Function to execute the command -- 
+        cmd.execute = data.execute
+    end
+
+    command.data[cmd.name] = cmd
+    command.netid[netid] = cmd
+
+    command.net.commandbits = blusky.util.getBits(netid)
+end
+
+function command.getByName(name)
+    return command.data[name]
+end
+
+function command.getByNetid(id)
+    return command.netid[id]
 end
 
 blusky.command = command
