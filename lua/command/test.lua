@@ -1,49 +1,41 @@
 return {
     name = "test",
 
-    -- Ensures that all arguments are properly accounted for and properly typed
-    parse = function(args) 
-        -- ensure enough arguments exist
-        if #args ~= 2 then
-            return blusky.command.commandCode.badArguments
-        end
-
-        -- arg 1 is a player, convert it as such
-        args[1] = player.find(args[1])
-        if not (IsEntity(args[1]) and args[1]:IsPlayer()) then
-            return blusky.command.commandCode.badArguments
-        end
-
-        -- arg 2 is a number
-        args[2] = tonumber(args[2])
-        if not args[2] then 
-            return blusky.command.commandCode.badArguments
-        end
-
-        return blusky.command.commandCode.ok
+    send = function(args)
+        net.WriteEntity(args[1])
+        net.WriteFloat(args[2])
     end,
 
-    -- Reads the arguments into a table for call (serverside)
-    unpack = function(args)
+    read = function()
         return {
             net.ReadEntity(),
-            net.ReadInt(net.ReadUInt(6))
+            net.ReadFloat()
         }
     end,
 
-    -- Sets the arguments up for networking (clientside)
-    pack = function(args)
-        net.WriteEntity(args[1])
-        local mlen = blusky.util.getBits(args[2])
-        net.WriteUInt(mlen, 6)
-        net.WriteInt(args[2], mlen)
-
-        return
+    parse = function(args)
+        args[1] = player.find(args[1])
+        args[2] = tonumber(args[2])
     end,
 
-    call = function(caller, args)
-        local str = "You've been sent the number %s by %s"
-        args[1]:ChatPrint(Format(str, args[2], caller:IsValid() and caller:Name() or "CONSOLE"))
-        return blusky.command.commandCode.ok
-    end
+    validate = function(args)
+        local error
+
+        if !IsEntity(args[1]) or !args[1]:IsPlayer() then
+            return blusky.command.enum.CODE_BAD_ARGUMENT, "Player expected for argument 1"
+        end
+        
+        if !isnumber(args[2]) then
+            return blusky.command.enum.CODE_BAD_ARGUMENT, "Number expected for argument 2"
+        end
+
+        return blusky.command.enum.CODE_OK
+    end,
+
+    execute = function(caller, args)
+        local name = IsValid(caller) and caller:Nick() or "CONSOLE"
+        local string = Format("%s sent you a debug number: %s", name, args[2])
+
+        args[1]:ChatPrint(string)
+    end 
 }
