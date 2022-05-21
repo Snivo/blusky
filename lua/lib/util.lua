@@ -54,9 +54,9 @@ function blusky.util.parseCommand(str)
 
         if token[1] == "quote" then
             if token[3] then
-                local prestr = str:sub(charIdx, token[2] - 1)
+                local prestr = str:byte(charIdx, token[2] - 1)
 
-                if prestr ~= "" and prestr ~= " " then
+                if prestr != nil and prestr ~= space then
                     args[#args + 1] = prestr
                 end
 
