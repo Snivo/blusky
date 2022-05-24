@@ -1,6 +1,10 @@
 return {
     name = "test",
 
+    usage = "test <target> <number>",
+
+    help = "Sends a number to a player for debug purposes",
+
     send = function(args)
         net.WriteEntity(args[1])
         net.WriteFloat(args[2])
