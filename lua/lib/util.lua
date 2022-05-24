@@ -20,6 +20,10 @@ function blusky.util.getBits(num)
     return bits
 end
 
+function blusky.argcheck(var, name, _type)
+    assert(type(var) == _type, Format("%s required for %s property", _type, name))
+end
+
 function blusky.util.parseCommand(str)
     local args = {}
     local tokens = {}
