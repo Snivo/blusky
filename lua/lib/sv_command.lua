@@ -28,14 +28,40 @@ function command.callNoParse( cmd, player, args )
     return cmd.execute(player, args)
 end
 
-function command.error(cmd, player, err)
+function command.error(cmd, code, player)
     if IsValid(player) then
-        command.net.sendError(ply, cmd and cmd.netid or 0, code)
+        command.net.sendError(player, cmd and cmd.netid or 0, code)
     else
-        blusky.debug.print("error", err)
+        blusky.debug.print("error", code)
         -- todo: handle error --
     end
 end
+
+-- Hook stuff --
+
+function command.hook.PlayerSay(player, text)
+    if !text:StartWith(blusky.config.commandString) then
+        return
+    end
+
+   local args = blusky.util.parseCommand(text:sub(#blusky.config.commandString + 1))
+   local cmd = command.getByName(table.remove(args, 1))
+
+   if !cmd then 
+        command.error(nil, command.enum.CODE_BAD_COMMAND, player)
+        return ""
+    end 
+
+    local result, code = command.call(cmd, player, args)
+
+    if !result then
+        command.error(cmd, code, player)
+    end
+
+    return ""
+end
+
+hook.Add("PlayerSay", "command.hook.PlayerSay", command.hook.PlayerSay)
 
 -- Netcode stuff --
 
