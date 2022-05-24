@@ -18,19 +18,15 @@ local command = {
 
 command.net.enumBits = blusky.util.getBits(table.Count(command.enum))
 
-local function argcheck(var, name, _type)
-    assert(type(var) == _type, Format("%s required for %s property", _type, name))
-end
-
 function command.register( data )
-    argcheck(data.name, "name", "string")
-    argcheck(data.name, "help", "string")
-    argcheck(data.name, "usage", "string")
-    argcheck(data.send, "send", "function")
-    argcheck(data.send, "read", "function")
-    argcheck(data.send, "parse", "function")
-    argcheck(data.send, "validate", "function")
-    argcheck(data.send, "execute", "function")
+    blusky.util.argcheck(data.name, "name", "string")
+    blusky.util.argcheck(data.help, "help", "string")
+    blusky.util.argcheck(data.usage, "usage", "string")
+    blusky.util.argcheck(data.send, "send", "function")
+    blusky.util.argcheck(data.read, "read", "function")
+    blusky.util.argcheck(data.parse, "parse", "function")
+    blusky.util.argcheck(data.validate, "validate", "function")
+    blusky.util.argcheck(data.execute, "execute", "function")
     
     local netid = #command.netid + 1
 
