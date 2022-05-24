@@ -30,9 +30,7 @@ function command.callNoParse( cmd, player, args )
 end
 
 function command.error( cmd, code )
-    print(blusky.theme.errorColor, code)
-
-    if !cmd or !code then
+    if !code then
         return
     end
 
@@ -40,7 +38,18 @@ function command.error( cmd, code )
         return
     end
 
-    chat.AddText(blusky.theme.errorColor, command.errorStrings[code])
+    local str
+
+    if code == command.enum.CODE_BAD_COMMAND then
+        str = "Unknown command"
+    elseif code == command.enum.CODE_BAD_ARGUMENT then
+        PrintTable(cmd)
+        str = Format("Incorrect usage of %s (%s)", cmd.name, cmd.usage)
+    else
+        str = Format("Unknown error: %s", code)
+    end
+
+    chat.AddText(blusky.theme.errorColor, str)
 end
 
 function command.net.call( cmd, args )
@@ -54,7 +63,7 @@ function command.net.sendError( len, ply )
     local cmd = command.getByNetid(net.ReadUInt(command.net.commandBits))
     local err = net.ReadUInt(command.net.enumBits)
 
-    command( cmd, err )
+    command.error( cmd, err )
 end
 
-net.Receive("command.net.sendError", command.net.sendError)
+net.Receive("blusky.command.sendError", command.net.sendError)
