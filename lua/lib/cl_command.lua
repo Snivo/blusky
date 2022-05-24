@@ -43,7 +43,6 @@ function command.error( cmd, code )
     if code == command.enum.CODE_BAD_COMMAND then
         str = "Unknown command"
     elseif code == command.enum.CODE_BAD_ARGUMENT then
-        PrintTable(cmd)
         str = Format("Incorrect usage of %s (%s)", cmd.name, cmd.usage)
     else
         str = Format("Unknown error: %s", code)
