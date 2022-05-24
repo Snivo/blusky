@@ -1,45 +1,60 @@
 local command = blusky.command
 
-function command.call(name, args)
-    local cmd = command.getByName(name)
-
-    if !cmd then
-        return command.enum.CODE_BAD_COMMAND
+function command.call( cmd, player, args )
+    if !cmd then 
+        return false, command.enum.CODE_BAD_COMMAND
     end
 
-    local code = cmd.validate(args)
-    if code != command.enum.CODE_OK then
-        return code
+    args = cmd.parse(args)
+
+    if !args then
+        return false, command.enum.CODE_BAD_ARGUMENT
     end
 
-    if hook.Run("blusky.command.suppress", name, args) then
+    return command.callNoParse(cmd, player, args)
+end
+
+function command.callNoParse( cmd, player, args )
+    local result, code = cmd.validate(args)
+
+    if !result then
+        return false, code
+    end
+
+    if hook.Run("blusky.command.suppressCommand", cmd, args) then
+        return true
+    end
+
+    command.net.call( cmd, args )
+    return true
+end
+
+function command.error( cmd, code )
+    print(blusky.theme.errorColor, code)
+
+    if !cmd or !code then
         return
     end
 
-    command.net.callRequest(cmd, args)
-    return command.enum.CODE_OK
+    if code == command.enum.CODE_OK then
+        return
+    end
+
+    chat.AddText(blusky.theme.errorColor, command.errorStrings[code])
 end
 
-function command.net.callRequest(cmd, args)
-    net.Start("blusky.command.execute")
+function command.net.call( cmd, args )
+    net.Start("blusky.command.call")
     net.WriteUInt(cmd.netid, command.net.commandBits)
     cmd.send(args)
     net.SendToServer()
 end
 
-function command.con.execute(ply, cmd, _, strargs)
-    local args = blusky.util.parseCommand(strargs)
-    local cmdName = table.remove(args, 1)
-    local cmd = command.getByName(cmdName)
+function command.net.sendError( len, ply )
+    local cmd = command.getByNetid(net.ReadUInt(command.net.commandBits))
+    local err = net.ReadUInt(command.net.enumBits)
 
-    if !cmd then
-        chat.AddText(blusky.theme.errorColor, Format("Invalid command: %s", cmdName))
-        return
-    end
-
-    cmd.parse(args)
-
-    command.call(cmd.name, args)
+    command( cmd, err )
 end
 
-concommand.Add("blusky", command.con.execute)
+net.Receive("command.net.sendError", command.net.sendError)

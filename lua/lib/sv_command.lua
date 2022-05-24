@@ -1,77 +1,71 @@
-local command = blusky.command 
+local command = blusky.command
 
-function command.call(name, caller, args)
-    local cmd = command.getByName(name)
-
-    if !cmd then
-        return command.enum.CODE_BAD_COMMAND
+function command.call( cmd, player, args )
+    if !cmd then 
+        return false, command.enum.CODE_BAD_COMMAND
     end
 
-    local code = cmd.validate(args)
-    if code != command.enum.CODE_OK then
-        return code
-    end
+    args = cmd.parse(args)
 
-    if hook.Run("blusky.command.suppress", name, caller, args) then
-        return
-    end
-
-    cmd.execute(caller, args)
-    return command.enum.CODE_OK
+    return command.callNoParse(cmd, player, args)
 end
 
--- Net receiver for when player calls a command --
-function command.net.callRequest(len, caller)
+function command.callNoParse( cmd, player, args )
+    if !args then
+        return false, command.enum.CODE_BAD_ARGUMENT
+    end
+
+    local result, code = cmd.validate(args)
+
+    if !result then
+        return false, code
+    end
+
+    if (hook.Run("blusky.command.suppressCommand", cmd, args, player)) then
+        return true
+    end
+
+    return cmd.execute(player, args)
+end
+
+function command.error(cmd, player, err)
+    if IsValid(player) then
+        command.net.sendError(ply, cmd and cmd.netid or 0, code)
+    else
+        blusky.debug.print("error", err)
+        -- todo: handle error --
+    end
+end
+
+-- Netcode stuff --
+
+function command.net.call(len, ply)
     local cmd = command.getByNetid(net.ReadUInt(command.net.commandBits))
 
     if !cmd then
-        command.net.relayError(command.enum.CODE_BAD_COMMAND, caller)
+        command.error(nil, command.enum.CODE_BAD_COMMAND, ply)
         return
     end
 
-    local code = command.call(cmd.name, caller, cmd.read())
-    if code != command.enum.CODE_OK then
-        command.net.relayError(code, caller)
-    end
-end
+    local args = cmd.read()
 
-function command.net.relayError(error, client, message)
-    net.Start("blusky.command.execute")
-    net.WriteUInt(error, command.net.enumBits)
+    local result, code = command.callNoParse(cmd, ply, args)
 
-    local hasMsg = message != nil and message != ""
-
-    net.WriteBool(hasMsg)
-    
-    if hasMsg then 
-        net.WriteString(message)
-    end
-
-    net.Send(client)
-end
-
-function command.con.execute(ply, _, _, strargs)
-    if IsValid(ply) then 
-        return 
-    end
-
-    local args = blusky.util.parseCommand(strargs)
-    local cmdName = table.remove(args, 1)
-    local cmd = command.getByName(cmdName)
-
-    if !cmd then
-        MsgC(blusky.theme.errorColor, Format("Invalid command: %s\n", cmdName))
+    if !result then
+        command.error(cmd, code, ply)
         return
     end
 
-    cmd.parse(args)
-
-    command.call(cmd.name, ply, args)
 end
 
-util.AddNetworkString("blusky.command.error")
-util.AddNetworkString("blusky.command.execute")
+function command.net.sendError( ply, netid, code )
+    net.Start("blusky.command.sendError")
+    net.WriteUInt(netid, command.net.commandBits)
+    net.WriteUInt(code, command.net.enumBits)
+    net.Send(ply)
+end
 
-net.Receive("blusky.command.execute", command.net.callRequest)
+net.Receive("blusky.command.call", command.net.call)
 
-concommand.Add("blusky", command.con.execute)
+util.AddNetworkString("blusky.command.call")
+util.AddNetworkString("blusky.command.sendError")
