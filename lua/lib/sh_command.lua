@@ -12,13 +12,8 @@ local command = {
         commandBits = 1,
         enumBits = 0
     },
-    con = {}
-}
-
-command.errorStrings = {
-    [command.enum.CODE_BAD_ARGUMENT] = "Incorrect usage of %s (%s)",
-    [command.enum.CODE_BAD_COMMAND] = "Unknown command!",
-    [command.enum.CODE_CONCOMMAND_BAD_USAGE] = "Incorrect usage of blusky (blusky <command name> <args>)"
+    con = {},
+    hook = {}
 }
 
 command.net.enumBits = blusky.util.getBits(table.Count(command.enum))
@@ -29,6 +24,8 @@ end
 
 function command.register( data )
     argcheck(data.name, "name", "string")
+    argcheck(data.name, "help", "string")
+    argcheck(data.name, "usage", "string")
     argcheck(data.send, "send", "function")
     argcheck(data.send, "read", "function")
     argcheck(data.send, "parse", "function")
@@ -40,6 +37,10 @@ function command.register( data )
     local cmd = {
         -- Name of the command --
         name = data.name,
+        -- Help text for command --
+        help = data.help,
+        -- Usage info for command --
+        usage = data.usage,
         -- Function for sending exec data over network --
         send = data.send,
         -- Function for reading exec data over network --
