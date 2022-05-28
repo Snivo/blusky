@@ -5,4 +5,4 @@ if SERVER then
     include = AddCSLuaFile
 end
 
-include("lib/cl_command.lua")
+include("lib/command/cl_command.lua")

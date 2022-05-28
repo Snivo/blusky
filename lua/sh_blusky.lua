@@ -8,7 +8,7 @@ AddCSLuaFile()
 
 include("lib/util.lua")
 include("lib/debug.lua")
-include("lib/sh_command.lua")
+include("lib/command/sh_command.lua")
 include("lib/player.lua")
 include("lib/theme.lua")
 include("lib/config.lua")

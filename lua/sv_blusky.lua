@@ -1,1 +1,1 @@
-include("lib/sv_command.lua")
+include("lib/command/sv_command.lua")
