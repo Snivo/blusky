@@ -1,49 +1,70 @@
 local group = {
-    data = {},
-    permission = {
-        permData = {},
-        netid = {},
-    },
-    cache = {}
-} 
+    groups = {},
+    netid = {},
+    perms = {
+        perms = {},
+        netid = {}
+    }
+}
 
 function group.new( data )
     blusky.util.argcheck(data.name, "name", "string")
 
-    local g = { 
-        name = data.name,
+    local netid = #group.netid + 1
 
-        -- Table of permission data --
-        permissions = {
-            data = {},
-            keys = {}
-        }
+    local g = {
+        name = data.name,
+        netid = netid,
+        validator = math.random(),
+        permissions = {}
     }
+
+    group.groups[data.name] = g
+    group.netid[netid] = g
+    
+    if SERVER then
+        group.onNewGroup(g)
+    end
 end
 
-function group.registerPermission( name, _type, default, sender, receiver )
-    local permission
-    local netid = #group.permission.netid + 1
-
-    blusky.util.argcheck(name, "name", "string")
-    blusky.util.argcheck(_type, "type", "string")
-    blusky.util.argcheck(default, "default", _type)
-    blusky.util.argcheck(sender, "sender", "function")
-    blusky.util.argcheck(receiver, "receiver", "function")
+-- Must be called shared to keep in sync -- 
+function group.registerPermission( name, sender, receiver, loader )
+    local meta = {
+        name = name,
+        netid = 0,
+        validator = 0,
+        key = "",
+        value = nil,
+        loader = loader
+    }
 
     if SERVER then
-        permission = {
-            name = name,
-            type = _type,
-            network = sender
-        }
+        meta.send = sender
     else
-        permission = {
-            name = name,
-            type = _type,
-            network = receiver
-        }
+        meta.receive = receiver
     end
+
+    local netid = #group.perms.netid + 1
+
+    group.netid = netid
+
+    group.perms.perms[name] = meta
+    group.perms.netid[netid] = meta
+end
+
+function group.addPermission( groupName, permName, key, value )
+    local g = group.groups[groupName]
+    local meta = group.perms.perms[permName]
+    local perm = {}
+
+    if !g or !meta then
+        return
+    end
+
+    setmetatable(perm, meta)
+
+    -- Permission injects itself into the group --
+    perm:loader(g, key, value)
 end
 
 blusky.group = group
